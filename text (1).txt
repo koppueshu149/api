@@ -1,0 +1,126 @@
+@RestController
+public class SingleApiController {
+
+    @Autowired
+    private DataIntegrationService dataIntegrationService;
+
+    @GetMapping("/single-api")
+    public String getSingleApiData() {
+        // Retrieve integrated data from the APIs
+        UnifiedDataModel unifiedData = dataIntegrationService.getIntegratedData();
+
+        // Render the data using Velocity templates
+        String renderedOutput = renderDataWithVelocity(unifiedData);
+
+        return renderedOutput;
+    }
+
+    private String renderDataWithVelocity(UnifiedDataModel unifiedData) {
+        // Merge the data with the Velocity template
+        VelocityEngine velocityEngine = new VelocityEngine();
+        velocityEngine.setProperty(RuntimeConstants.RESOURCE_LOADER, "class");
+        velocityEngine.setProperty("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
+        velocityEngine.init();
+
+        Template template = velocityEngine.getTemplate("templates/single-api-template.vm");
+        VelocityContext velocityContext = new VelocityContext();
+        velocityContext.put("data", unifiedData);
+        StringWriter writer = new StringWriter();
+        template.merge(velocityContext, writer);
+
+        return writer.toString();
+    }
+}
+
+
+
+Model
+
+public class DataModel {
+    // Define your data fields
+    private String id;
+    private String name;
+    // Add getters and setters
+}
+
+
+Controller
+
+@RestController
+public class DataController {
+
+    @Autowired
+    private DataService dataService;
+
+    @GetMapping("/api/data/{id}")
+    public String getData(@PathVariable String id, Model model) {
+        DataModel data = dataService.getDataById(id);
+
+        model.addAttribute("data", data);
+        return "data-template"; // The name of the Velocity template to render
+    }
+}
+
+
+Service
+@Service
+public class DataService {
+
+    public DataModel getDataById(String id) {
+        // Fetch data from a data source or perform any necessary operations
+        // Replace this with your actual logic to retrieve the data
+        DataModel data = new DataModel();
+        data.setId(id);
+        data.setName("Sample Data");
+        return data;
+    }
+}
+
+
+
+Gateway
+
+@Configuration
+public class GatewayConfig {
+
+    @Autowired
+    private VelocityEngine velocityEngine;
+
+    @Bean
+    public ViewResolver viewResolver() {
+        VelocityViewResolver resolver = new VelocityViewResolver();
+        resolver.setPrefix("");
+        resolver.setSuffix(".vm");
+        resolver.setViewClass(VelocityLayoutView.class);
+        resolver.setCache(true);
+        resolver.setExposeSpringMacroHelpers(true);
+        resolver.setExposeRequestAttributes(true);
+        resolver.setToolboxConfigLocation("/WEB-INF/velocity-toolbox.xml");
+        return resolver;
+    }
+
+    @Bean
+    public VelocityEngine velocityEngine() {
+        VelocityEngine velocityEngine = new VelocityEngine();
+        velocityEngine.setProperty(RuntimeConstants.RESOURCE_LOADER, "classpath");
+        velocityEngine.setProperty(RuntimeConstants.INPUT_ENCODING, "UTF-8");
+        velocityEngine.setProperty(RuntimeConstants.OUTPUT_ENCODING, "UTF-8");
+        velocityEngine.init();
+        return velocityEngine;
+    }
+}
+
+
+
+Velocity
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Flow API</title>
+</head>
+<body>
+    <h1>Data Details:</h1>
+    <p>ID: $data.id</p>
+    <p>Name: $data.name</p>
+</body>
+</html>
